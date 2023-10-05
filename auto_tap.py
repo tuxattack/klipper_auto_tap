@@ -32,7 +32,7 @@ class AutoTAP:
         self.probe_speed    = config.getfloat(  'probe_speed',    default=None,   above=0.0)
         self.lift_speed     = config.getfloat(  'lift_speed',     default=None,   above=0.0)
         self.travel_speed   = config.getfloat(  'travel_speed',   default=1000.0, above=0.0)
-
+        self.probe_offset   = config.getfloat(  'probe_offset',   default=-1.5)
 
         self.offset = None
 
@@ -102,6 +102,8 @@ class AutoTAP:
         lift_speed = gcmd.get_float("LIFT_SPEED", default=self.lift_speed, above=0.0)
         travel_speed = gcmd.get_float("TRAVEL_SPEED", default=self.travel_speed, above=0.0)
 
+        probe_offset = gcmd.get_float("PROBE_OFFSET", default=self.probe_offset)
+
         force = gcmd.get_int("FORCE", 0, minval=0, maxval=1)
 
         if not calc_method in self.calc_choices.keys():
@@ -116,16 +118,16 @@ class AutoTAP:
         self._set_z_offset(0.0) # reset gcode z offset to 0
 
         step_count = int(stop / step)
-        self.gcode.respond_info(f"Auto TAP performing {sample_count} samples to calculate z-offset with {calc_method} method\nPossible steps: {step_count}, Stop: {stop}, Step: {step}")
+        self.gcode.respond_info(f"Auto TAP performing {sample_count} samples to calculate z-offset with {calc_method} method\nPossible steps: {step_count}, Stop: {stop}, Step: {step}, Probe Offset: {probe_offset}")
         steps = []
         probes = []
         measures = []
         travels = []
         if settling_probe:
-            self._probe(self.z_endstop.mcu_endstop, -1, probe_speed)
+            self._probe(self.z_endstop.mcu_endstop, probe_offset, probe_speed)
             self._move([None, None, stop + retract], lift_speed)
         while len(travels) < sample_count:
-            start_at = self._probe(self.z_endstop.mcu_endstop, -1, probe_speed)[2]
+            start_at = self._probe(self.z_endstop.mcu_endstop, probe_offset, probe_speed)[2]
             #self.gcode.respond_info(f"Starting sample {len(travels) + 1}")
             for i in range(0, step_count, 1):
                 z_pos = start_at + (step * i)
